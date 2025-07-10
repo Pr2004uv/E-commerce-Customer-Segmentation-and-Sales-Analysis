@@ -5,42 +5,36 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import datetime as dt
 
-# --- Page Configuration ---
+
 st.set_page_config(
     page_title="E-commerce Sales Dashboard",
     page_icon="🛒",
     layout="wide"
 )
 
-# --- Data Loading and Caching ---
+
 @st.cache_data
 def load_data(file_path):
     """Loads, cleans, and preprocesses the e-commerce data."""
     df = pd.read_excel(file_path, engine='openpyxl')
     
-    # --- Data Cleaning ---
-    # Drop rows with missing CustomerID
+    
     df.dropna(subset=['CustomerID'], inplace=True)
     
-    # Remove cancelled orders (InvoiceNo starts with 'C')
-    df = df[~df['InvoiceNo'].astype(str).str.startswith('C')]
     
-    # Remove rows with negative or zero quantity/price
+    df = df[~df['InvoiceNo'].astype(str).str.startswith('C')]
     df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0)]
     
-    # --- Feature Engineering ---
-    # Calculate TotalPrice
+
     df['TotalPrice'] = df['Quantity'] * df['UnitPrice']
     
-    # Convert CustomerID to string
     df['CustomerID'] = df['CustomerID'].astype(int).astype(str)
-    
-    # Convert InvoiceDate to datetime
+ 
     df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
     
     return df
 
-# Load the data
+
 try:
     df = load_data('Online Retail.xlsx')
 except FileNotFoundError:
@@ -48,7 +42,6 @@ except FileNotFoundError:
     st.stop()
 
 
-# --- Sidebar Filters ---
 st.sidebar.header("Filters")
 country = st.sidebar.multiselect(
     "Select Country",
@@ -56,14 +49,11 @@ country = st.sidebar.multiselect(
     default=df['Country'].unique()
 )
 
-# Filter data based on selection
 df_selection = df[df['Country'].isin(country)]
 
-# --- Main Page ---
 st.title("🛒 E-commerce Sales & Customer Analysis Dashboard")
 st.markdown("---")
 
-# --- Key Performance Indicators (KPIs) ---
 total_sales = int(df_selection['TotalPrice'].sum())
 total_orders = df_selection['InvoiceNo'].nunique()
 total_customers = df_selection['CustomerID'].nunique()
@@ -79,9 +69,6 @@ with col3:
 st.markdown("---")
 
 
-# --- Visualizations ---
-
-# 1. Monthly Sales Trend
 st.subheader("Monthly Sales Trend")
 df_selection['YearMonth'] = df_selection['InvoiceDate'].dt.to_period('M').astype(str)
 monthly_sales = df_selection.groupby('YearMonth')['TotalPrice'].sum().reset_index()
@@ -96,8 +83,6 @@ fig_monthly_sales = px.line(
 )
 st.plotly_chart(fig_monthly_sales, use_container_width=True)
 
-
-# 2. Sales by Country and Top Products
 col1, col2 = st.columns(2)
 
 with col1:
@@ -133,7 +118,7 @@ st.markdown("---")
 # --- RFM Analysis & Customer Segmentation ---
 st.header("Customer Segmentation with RFM Analysis")
 
-# Calculate RFM metrics
+# Calculation of RFM metrics
 snapshot_date = df_selection['InvoiceDate'].max() + dt.timedelta(days=1)
 rfm = df_selection.groupby('CustomerID').agg({
     'InvoiceDate': lambda date: (snapshot_date - date.max()).days,
@@ -166,4 +151,4 @@ fig_rfm = px.scatter_3d(
 fig_rfm.update_traces(marker=dict(size=5))
 st.plotly_chart(fig_rfm, use_container_width=True)
 
-st.info("""
+
